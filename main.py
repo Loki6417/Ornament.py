@@ -3,32 +3,26 @@ import machine
 import neopixel
 from umqtt.simple import MQTTClient
 
-# button variable
-
 button = machine.Pin(5, machine.Pin.IN, machine.Pin.PULL_UP)
-
-# pixel and output pin variables
 pixelpin = machine.Pin(4, machine.Pin.OUT)
 np = neopixel.NeoPixel(pixelpin, 7, 3)
 n = np.n
+cheervalue = ""
 
-# np animation pvariables
-
+# np animation parameters
 total_steps = 255  # total number of steps in the pattern
 step_index = 0  # current step within the pattern
 
 # mqtt adafruit io variables
 
 my_ornament = machine.unique_id()
-mqtt_client = "ezMqttClient"
+mqtt_client = "rnMqttClient"
 ada_url = "io.adafruit.com"
 username = "rickardn"
 ada_io_key = "7ae1640893fa401e941e71f726ffc72c"
 c = MQTTClient(mqtt_client, ada_url, 0, username, ada_io_key)
 
-# used to increment step index
-
-def increment():
+def increment():  # increment the step_index
     global step_index
     global total_steps
     if step_index >= total_steps:
@@ -36,7 +30,6 @@ def increment():
     else:
         step_index = step_index + 1
 
-# used to define the position of the wheel in order to increment colors in rainbow function
 
 def wheel(wheel_pos):
     wheel_pos = 255 - wheel_pos
@@ -55,7 +48,6 @@ def wheel(wheel_pos):
         color = (0, 75, 0, 0)
         return color
 
-#code for the main visual if other group pushed button
 
 def rainbow_cycle():  # rainbow cycle animation
     for i in range(n):
@@ -72,6 +64,18 @@ def rainbow_cycle():  # rainbow cycle animation
         np.write()
         increment()
 
+
+def cheerwrite():
+    c.connect()
+    c.publish("rickardn/feeds/ornament.cheer", str(my_ornament))
+    time.sleep(1)
+    c.disconnect()
+
+def cheercheck():
+    c.connect()
+    c.subscribe("rickardn/feeds/ornament.cheer")
+
+
 # message for no holiday cheer available
 # use x increment value of 3 for this function
 
@@ -85,29 +89,15 @@ def fade():
             np[j] = (val, 0, 0)
         np.write()
 
-# connect to Adafruit IO using MQTT
-
-def check_in():
-    c.connect()
-    c.publish("rickardn/feeds/ornament.last-checkin-key", str("1"))
-    c.publish("edzdeb/feeds/ornament.last-checkin-ornament-id", str(my_ornament))
-    time.sleep(1)
-    c.disconnect()
-
-# LOOP --------------------------- LOOP
-
-# check in online with MQTT at I/0.Adafruit.com
-check_in()
-
 while True:
     x=0
     if not button.value():
+        cheercheck()
         while x<150:
             rainbow_cycle()
             x += 1
             time.sleep(0.01)
-    while not button.value():
-        pass
+        cheerwrite()
 
     # turn off the lights
     for i in range(n):
